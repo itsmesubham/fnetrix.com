@@ -24,8 +24,8 @@ const brand = {
   subtag: "Modern ERP, web apps, and mobile apps—delivered with enterprise discipline and startup speed.",
   primaryCta: "Book a demo",
   secondaryCta: "See capabilities",
-  email: "hello@fnetrix.com",
-  phone: "+91-00000-00000",
+  email: "team@fnetrix.com",
+  phone: "+91-8282956669",
 };
 
 const nav = [
