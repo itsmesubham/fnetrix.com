@@ -17,12 +17,6 @@ import {
   X,
 } from "lucide-react";
 
-// ------------------------------------------------------------
-// Fnetrix.com – Single-file marketing site (React + Tailwind)
-// - Clean enterprise feel (SAP/Oracle/Salesforce-inspired)
-// - Happy theme (bright gradients + friendly microcopy)
-// - Production-ready sections + simple interactions
-// ------------------------------------------------------------
 
 const brand = {
   name: "Fnetrix",
