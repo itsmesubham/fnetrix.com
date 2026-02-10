@@ -16,6 +16,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import { ContactFormData, submitContactFormWithPublish } from "./services/webiny-api";
 
 
 const brand = {
@@ -340,6 +341,66 @@ export default function FnetrixWebsite() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileOpen]);
+
+  // State for form data
+  const [formData, setFormData] = useState<ContactFormData>({
+    fullName: '',
+    email: '',
+    company: '',
+    helpWith: '',
+    timeline: '',
+    projectNote: ''
+  });
+
+  // State for submission status
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitSuccess(false);
+    setSubmitError(null);
+
+    try {
+      const result = await submitContactFormWithPublish(formData);
+      
+      if (result.error) {
+        setSubmitError(result.error);
+      } else {
+        setSubmitSuccess(true);
+        // Reset form after successful submission
+        setFormData({
+          fullName: '',
+          email: '',
+          company: '',
+          helpWith: '',
+          timeline: '',
+          projectNote: ''
+        });
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          setSubmitSuccess(false);
+        }, 5000);
+      }
+    } catch (error: any) {
+      setSubmitError(error.message || 'An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white text-slate-900" id="top">
@@ -797,41 +858,87 @@ export default function FnetrixWebsite() {
 
               <form
                 className="mt-6 grid gap-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  // Replace with your backend endpoint.
-                  alert("Thanks! Connect this form to your backend (or a service like Formspree). 🚀");
-                }}
+                onSubmit={handleSubmit}
               >
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Full name" placeholder="Your name" required />
-                  <Field label="Work email" placeholder="you@company.com" type="email" required />
+                  <Field 
+                    label="Full name" 
+                    placeholder="Your name" 
+                    required 
+                    name="fullName"
+                    onChange={handleInputChange}
+                    value={formData.fullName}
+                  />
+                  <Field 
+                    label="Work email" 
+                    placeholder="you@company.com" 
+                    type="email" 
+                    required 
+                    name="email"
+                    onChange={handleInputChange}
+                    value={formData.email}
+                  />
                 </div>
-                <Field label="Company" placeholder="Company / org" />
+                <Field 
+                  label="Company" 
+                  placeholder="Company / org" 
+                  name="company"
+                  onChange={handleInputChange}
+                  value={formData.company}
+                />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <SelectField
                     label="Need help with"
                     required
                     options={["ERP", "Web app", "Mobile app", "Integrations", "Security", "Not sure"]}
+                    name="helpWith"
+                    onChange={handleInputChange}
+                    value={formData.helpWith}
                   />
                   <SelectField
                     label="Timeline"
                     required
                     options={["ASAP", "This month", "This quarter", "Just exploring"]}
+                    name="timeline"
+                    onChange={handleInputChange}
+                    value={formData.timeline}
                   />
                 </div>
-                <TextArea label="Project note" placeholder="What are you trying to achieve? (A few lines is perfect.)" />
+                <TextArea 
+                  label="Project note" 
+                  placeholder="What are you trying to achieve? (A few lines is perfect.)"
+                  name="projectNote"
+                  onChange={handleInputChange}
+                  value={formData.projectNote}
+                />
 
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                   <button
                     type="submit"
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+                    disabled={isSubmitting}
+                    className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${
+                      isSubmitting 
+                        ? 'bg-slate-400 cursor-not-allowed' 
+                        : 'bg-slate-900 text-white hover:bg-slate-800'
+                    }`}
                   >
-                    Send request
+                    {isSubmitting ? 'Sending...' : 'Send request'}
                     <ArrowRight className="h-4 w-4" />
                   </button>
                   <div className="text-xs text-slate-500">No spam. Just plans.</div>
                 </div>
+                
+                {submitSuccess && (
+                  <div className="mt-4 p-3 bg-green-100 text-green-800 rounded-lg text-sm">
+                    Thank you! Your message has been sent successfully.
+                  </div>
+                )}
+                
+                {submitError && (
+                  <div className="mt-4 p-3 bg-red-100 text-red-800 rounded-lg text-sm">
+                    Error: {submitError}
+                  </div>
+                )}
               </form>
 
               <div className="mt-7 rounded-3xl bg-slate-50 p-6 ring-1 ring-slate-900/5">
@@ -951,11 +1058,14 @@ function QuickStart({ title, desc }: { title: string, desc: string }) {
   );
 }
 
-function Field({ label, type = "text", placeholder, required }: {
+function Field({ label, type = "text", placeholder, required, name, onChange, value }: {
   label: string,
   type?: string,
   placeholder: string,
-  required?: boolean
+  required?: boolean,
+  name?: string,
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void,
+  value?: string
 }) {
   return (
     <label className="grid gap-2">
@@ -964,24 +1074,32 @@ function Field({ label, type = "text", placeholder, required }: {
         type={type}
         placeholder={placeholder}
         required={required}
+        name={name}
+        onChange={onChange}
+        value={value}
         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10"
       />
     </label>
   );
 }
 
-function SelectField({ label, options, required }: {
+function SelectField({ label, options, required, name, onChange, value }: {
   label: string,
   options: string[],
-  required?: boolean
+  required?: boolean,
+  name?: string,
+  onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void,
+  value?: string
 }) {
   return (
     <label className="grid gap-2">
       <span className="text-xs font-semibold text-slate-700">{label}{required ? " *" : ""}</span>
       <select
         required={required}
+        name={name}
+        onChange={onChange}
+        value={value}
         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10"
-        defaultValue={""}
       >
         <option value="" disabled>
           Select
@@ -996,13 +1114,22 @@ function SelectField({ label, options, required }: {
   );
 }
 
-function TextArea({ label, placeholder }: { label: string, placeholder: string }) {
+function TextArea({ label, placeholder, name, onChange, value }: { 
+  label: string, 
+  placeholder: string,
+  name?: string,
+  onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void,
+  value?: string
+}) {
   return (
     <label className="grid gap-2">
       <span className="text-xs font-semibold text-slate-700">{label}</span>
       <textarea
         placeholder={placeholder}
         rows={4}
+        name={name}
+        onChange={onChange}
+        value={value}
         className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10"
       />
     </label>
